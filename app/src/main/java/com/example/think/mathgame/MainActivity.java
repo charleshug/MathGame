@@ -9,33 +9,60 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.content.Context;
 import android.os.Vibrator;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class MainActivity extends AppCompatActivity {
 
+    //Other variables
+    Map<String,Boolean> numbersMap;
+    String [] allowedNumbersNames;
+    Boolean [] allowedNumbersBoolean;
+    String [] mathFunctionNames = {"Addition","Subtraction","Multiplication","Division"};
+    char [] mathSymbols = {'+','-','x','÷'};
+    int mathFunction = 0;
+    int userAnswer = 0;
+    int variable1;
+    int variable2;
+    int correctAnswer;
+    Vibrator vibratorThing;
+
+
+    //GUI variables
     TextView messageText;
     Button refreshButtonView;
     TextView variable1View;
     EditText answerView;
     Button answerButtonView;
-    Boolean [] checkBoxBoolean = {false,false,false,false,false,false,false,false,false,false,};
-    Vibrator vibratorThing;
-
-    String[] exclusionsNames;
-
-    String [] mathFunctionNames = {"Addition","Subtraction","Multiplication","Division"};
-    char [] mathSymbols = {'+','-','x','÷'};
-    int mathFunction = 0;
-    int variable1;
-    int variable2;
-    int correctAnswer;
-    int userAnswer = 0;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //initialize allowedNumbersBoolean[], true values are included
+        allowedNumbersBoolean = new Boolean[10];
+        for(int i = 0; i < allowedNumbersBoolean.length; i++){
+            allowedNumbersBoolean[i] = true;
+        }
+
+        //instantiate array of the names of allowed numbers
+        allowedNumbersNames = new String [10];
+        for(int i =0; i<10; i++){
+            allowedNumbersNames[i] = Integer.toString(i);
+        }
+
+        //initialize HashMap of included numbers, default all true
+        numbersMap = new HashMap<String,Boolean>();
+        for(String number : allowedNumbersNames){
+            numbersMap.put(number,true);
+        }
+
+        //instantiate vibrator service
+        vibratorThing = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
 
         //GUI references
         messageText = (TextView) findViewById(R.id.messageText);
@@ -44,83 +71,37 @@ public class MainActivity extends AppCompatActivity {
         answerView = (EditText) findViewById(R.id.answerView);
         answerButtonView = (Button) findViewById(R.id.answerButtonView);
 
-        //assign string values to the array, but allow the array to be defined before onCreate
-        exclusionsNames = new String [10];
-        for(int i =0; i<10; i++){
-            exclusionsNames[i] = Integer.toString(i);
-        }
-
         //set listeners
         refreshButtonView.setOnClickListener(refresh_OnClickListener);
         answerButtonView.setOnClickListener(checkAnswer_OnClickListener);
 
-        //instantiate vibrator service
-        vibratorThing = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-
         //to auto-show keyboard
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
 
+
         //start the game
-        generateNumbers2();
-
+        resetNumbers();
     }
 
-    //generate random number that is not excluded
-    private int generateNum(){
-        int temp;
-        //create random int and check if it's an excluded number
-        while(true) {
-
-            temp = (int) (Math.random() * 10);
-            //if random number is NOT excluded, return number to caller
-            if (!checkBoxBoolean[temp]) {
-                return temp;
-            }
-        }
-    }
-
-    private void buzz(int i){
-        vibratorThing.vibrate(i);
-    }
-
-    private boolean setMathFunction(int i){
-        //ensure parameter is valid 0-3
-        //default to addition
-        if(i > 3 || i < 0){
-            mathFunction = 0;
-            return false;
-        }
-        mathFunction = i;
-        return true;
-    }
-
-    private String buildMathExpression(){
-        String temp = "";
-        temp = Integer.toString(variable1) + " ";
-        temp += mathSymbols[mathFunction] + " ";
-        temp += Integer.toString(variable2);
-        return temp;
-    }
-
-
-    private void generateNumbers2(){
-
-        //Generate random numbers
+    public void resetNumbers(){
+        //Generate allowable, random numbers
         variable1 = generateNum();
         variable2 = generateNum();
 
+        //calculate the answer depending on the function
+        //addition
         if (mathFunction==0) {
             correctAnswer = variable1 + variable2;
         }
-        //for subtraction
+        //subtraction
         else if(mathFunction==1) {
             correctAnswer = variable1 - variable2;
         }
-        //for multiplication
+        //multiplication
         else if(mathFunction==2) {
             correctAnswer = variable1 * variable2;
         }
-        //for division
+        //division
         else {
             correctAnswer = variable1 / variable2;
         }
@@ -131,20 +112,60 @@ public class MainActivity extends AppCompatActivity {
         answerView.getText().clear();
     }
 
-    private boolean setUserAnswer(){
+    //generate random integer from 0 to 9
+    public int generateNum() {
+        //keeps generating random number until it is allowed
+        while (true) {
+            int temp = (int) (Math.random() * 10);
+            if (checkNum(temp)) {
+                return temp;
+            }
+        }
+    }
+
+    //check if number is allowed
+    public boolean checkNum(int number) {
+
+        return numbersMap.get(Integer.toString(number));
+    }
+
+    public  void buzz(int i){
+        vibratorThing.vibrate(i);
+    }
+
+
+    //for GUI presentation
+    public String buildMathExpression(){
+        String temp = "";
+        temp = Integer.toString(variable1) + " ";
+        temp += mathSymbols[mathFunction] + " ";
+        temp += Integer.toString(variable2);
+        return temp;
+    }
+
+
+    //assign userAnswer variable from GUI
+    public boolean checkUserAnswerIsValid(){
         String temp = answerView.getText().toString();
-        try {userAnswer = Integer.parseInt(temp);}
-        catch(NumberFormatException e) {return false;}
+        try {
+            userAnswer = Integer.parseInt(temp);
+        }
+        catch(NumberFormatException e){
+            return false;
+        }
         return true;
     }
 
-    private void checkAnswer(){
+    //run when user presses Check Answer button
+    public void checkAnswer(){
         //pull valid user answer from the EditText
-        if(setUserAnswer()) {
+        if(checkUserAnswerIsValid()) {
             //compare user answer to the correct answer
             if (correctAnswer == userAnswer) {
-                generateNumbers2();
-                buzz(100);
+                messageText.setText("Correct");
+                buzz(200);
+                resetNumbers();
+                messageText.setText("Enter guess:");
                 return;
             }
             buzz(500);
@@ -153,9 +174,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+//    //called by Menu option when user selects addition, subtraction...
+//    public  boolean setMathFunction(int i){
+//        //ensure parameter is valid 0-3
+//        //default to addition
+//        if(i > 3 || i < 0){
+//            mathFunction = 0;
+//            return false;
+//        }
+//        mathFunction = i;
+//        return true;
+//    }
+
     View.OnClickListener refresh_OnClickListener = new View.OnClickListener() {
         public void onClick(View v) {
-            generateNumbers2();
+            resetNumbers();
         }
     };
 
